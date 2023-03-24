@@ -1,30 +1,38 @@
+import 'package:proxy/nx_download.dart';
+import 'package:proxy/string_util.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_router/shelf_router.dart';
 
-
 void main() async {
   var app = Router();
-  app.get('/*', (Request request) {
-   // if(request.headers['host']=="download2.nexon.net")
-      switch (request.headers['host']){
-        case 'download2.nexon.net':
-          downloadHandler(request);
-          break;
-        case 'nxcache.nexon.net':
-      }
+  app.get('/<ignored|.*>', (Request request) async {
+    downloadHandler(request);
+    // if(request.headers['host']=="download2.nexon.net")
+    switch (request.headers['host']) {
+      case 'download2.nexon.net':
+        return await downloadHandler(request);
+      case 'nxcache.nexon.net':
+    }
     return Response.ok('hello-world');
   });
 
   var handler = const Pipeline().addMiddleware(logRequests()).addHandler(app);
-  var server = await io.serve(handler, 'localhost', 0);
-
+  var server = await io.serve(handler, '127.0.0.1', 80);
 
   // 打印服务器端口号
   print('Server listening on port ${server.port}');
 }
 
-void downloadHandler(Request request){
+Future<Response> downloadHandler(Request request) async {
+  final path = request.requestedUri.path;
 
+  if (!path.hasPrefix('/Game/nxl/games/10100/10100/')) {
+    final ip = await NxDownloader.getCanUserHost();
+    print('$ip$path');
+    return NxDownloader.download(ip, request, Duration(seconds: 3));
+  }
+
+  final bestIP = await NxDownloader.calc();
+  return NxDownloader.download(bestIP, request, Duration(seconds: 30));
 }
-
