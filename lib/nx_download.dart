@@ -69,8 +69,14 @@ class NxDownloader {
   static Future<Response> download(String ip, Request oldRequest, Duration time) async {
     // 向远程服务器发出请求
     final client = HttpClient();
+    client.autoUncompress = false;
     final uri = Uri.parse('http://$ip${oldRequest.requestedUri.path}');
-    final request = await client.getUrl(uri).timeout(time);
+    HttpClientRequest request;
+    if (time.isNegative) {
+      request = await client.getUrl(uri);
+    } else {
+      request = await client.getUrl(uri).timeout(time);
+    }
     if (ip != downloadCDN) {
       oldRequest.headers.forEach((name, value) => request.headers.set(name, value));
     }
@@ -142,6 +148,9 @@ class NxDownloader {
         bestSpeed = r.value;
       }
       print("IP address: ${r.key}\t\tDownload speed:${r.value.toString()} Mbps");
+    }
+    if (bestSpeed < 180) {
+      return downloadCDN;
     }
     return bestIP;
   }

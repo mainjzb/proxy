@@ -1,10 +1,20 @@
 import 'package:proxy/nx_download.dart';
+import 'package:proxy/nxcache.dart';
+import 'package:proxy/pipe.dart';
 import 'package:proxy/string_util.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_router/shelf_router.dart';
 
-void main() async {
+void main(List<String> arguments) async {
+  if (arguments.isEmpty) {
+    return;
+  }
+  var parentPid = arguments[0];
+  if (parentPid != "0") {
+    monitorParent(parentPid);
+  }
+
   var app = Router();
   app.get('/<ignored|.*>', (Request request) async {
     downloadHandler(request);
@@ -13,6 +23,7 @@ void main() async {
       case 'download2.nexon.net':
         return await downloadHandler(request);
       case 'nxcache.nexon.net':
+        return await nxcacheHandler(request);
     }
     return Response.ok('hello-world');
   });
@@ -35,4 +46,8 @@ Future<Response> downloadHandler(Request request) async {
 
   final bestIP = await NxDownloader.calc();
   return NxDownloader.download(bestIP, request, Duration(seconds: 30));
+}
+
+Future<Response> nxcacheHandler(Request request) async {
+  return Nxcache.getImage(request);
 }
